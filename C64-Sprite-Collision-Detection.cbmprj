@@ -52,5 +52,16 @@
             <Topmost>False</Topmost>
             <FileOpen>True</FileOpen>
         </SourceFile>
+        <SourceFile>
+            <Name>maze.sdd</Name>
+            <PrgName />
+            <FileType>9</FileType>
+            <IncludeInBuild>True</IncludeInBuild>
+            <Regions />
+            <Breakpoints />
+            <Bookmarks />
+            <Topmost>False</Topmost>
+            <FileOpen>False</FileOpen>
+        </SourceFile>
     </SourceFiles>
 </Project>
