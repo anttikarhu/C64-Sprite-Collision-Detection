@@ -49,8 +49,19 @@
             <Regions />
             <Breakpoints />
             <Bookmarks />
-            <Topmost>True</Topmost>
+            <Topmost>False</Topmost>
             <FileOpen>True</FileOpen>
+        </SourceFile>
+        <SourceFile>
+            <Name>dude.spt</Name>
+            <PrgName />
+            <FileType>7</FileType>
+            <IncludeInBuild>True</IncludeInBuild>
+            <Regions />
+            <Breakpoints />
+            <Bookmarks />
+            <Topmost>False</Topmost>
+            <FileOpen>False</FileOpen>
         </SourceFile>
         <SourceFile>
             <Name>maze.sdd</Name>
