@@ -22,8 +22,6 @@ BGCOLOR2        = $D023
 SPR_ENABLE      = $D015 ; FLAGS FOR SPRITE ENABLING
 SPR_MSBX        = $D010 ; FLAGS TO REPRESENT X VALUES LARGER THAN 255
 SPR_COLORMODE   = $D01C ; FLAGS TO SET COLOR MODES (0 = HIGH RES/2-COLOR, 1 = MULTICOLOR/4-COLOR)
-SPR_COLOR0      = $D025 ; SHARED SPRITE COLOR 0
-SPR_COLOR1      = $D026 ; SHARED SPRITE COLOR 1
 SPR0_PTR        = $07F8 ; SPRITE 0 DATA POINTER
 SPR0_X          = $D000 ; SPRITE X COORDINATE
 SPR0_Y          = $D001 ; SPRITE Y COORDINATE
@@ -35,6 +33,7 @@ LEFT_ADDR       = #$83
 FRAME0_DATA     = $2000
 COLOR_BLACK     = #0
 JOYSTICK_B      = $DC01
+COLL_REG        = $D01F
 
 INIT
         ; LOAD THE MAZE ========================================================
@@ -177,6 +176,15 @@ LDSPR   LDA SPRITES,X
         CPX #255 ; 64 * 4 BYTES FOR 4 FRAMES
         BNE LDSPR
 
+; TEMP CODE
+        LDA SPR0_X
+        STA $FA
+        LDA SPR0_Y
+        STA $FB
+        LDA SPR_MSBX
+        STA $FC
+        JMP MAIN
+
 MAIN    
         LDX #255 ; WAIT A BIT
         LDY #10
@@ -186,11 +194,9 @@ WAIT    DEX
         DEY
         BNE WAIT
 
+        ; MOVE THE DUDE ========================================================
         CMP JOYSTICK_B
-        BEQ MAIN
-
-READ    LDA JOYSTICK_B
-        STA $02
+        BEQ CHECK_COLL
 
 UP      LDA #%00000001
         BIT JOYSTICK_B
@@ -198,7 +204,6 @@ UP      LDA #%00000001
         DEC SPR0_Y
         LDX UP_ADDR
         STX SPR0_PTR
-        
 
 DOWN    LDA #%00000010
         BIT JOYSTICK_B
@@ -222,15 +227,36 @@ LEFT    LDA #%00000100
 
 RIGHT   LDA #%00001000
         BIT JOYSTICK_B
-        BNE MAIN
+        BNE CHECK_COLL
         INC SPR0_X
         LDX RIGHT_ADDR
         STX SPR0_PTR
         LDX SPR0_X ;TOGGLE X MSB IF GOING OVER 255 OR 511
         CPX #0
-        BNE MAIN
+        BNE CHECK_COLL
         INC SPR_MSBX
-        
+
+CHECK_COLL
+        ; CHECK FOR COLLISION BY POLLING SPRITE-BACKGROUND HARDWARE COLLISION REGISTER
+        LDX COLL_REG
+        CPX #%00000001
+        BNE NO_COLL
+        ; MOVE SPRITE BACK TO PREVIOUS POSITION IF COLLIDED
+        LDA $FA
+        STA SPR0_X
+        LDA $FB
+        STA SPR0_Y
+        LDA $FC
+        STA SPR_MSBX
+        JMP MAIN
+NO_COLL
+        ; STORE PREVIOUS LOCATION WITH NO COLLISION
+        ;LDA SPR0_X
+        ;STA $FA
+        ;LDA SPR0_Y
+        ;STA $FB
+        ;LDA SPR_MSBX
+        ;STA $FC
         JMP MAIN
 
 CHMAP   BYTE    $AA,$EE,$9A,$AE,$AA,$BA,$96,$AB
