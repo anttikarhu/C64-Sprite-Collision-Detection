@@ -19,8 +19,21 @@ SCRCTRL2        = $D016
 BGCOLOR0        = $D021
 BGCOLOR1        = $D022
 BGCOLOR2        = $D023
+SPR_ENABLE      = $D015 ; FLAGS FOR SPRITE ENABLING
+SPR_MSBX        = $D010 ; FLAGS TO REPRESENT X VALUES LARGER THAN 255
+SPR_COLORMODE   = $D01C ; FLAGS TO SET COLOR MODES (0 = HIGH RES/2-COLOR, 1 = MULTICOLOR/4-COLOR)
+SPR_COLOR0      = $D025 ; SHARED SPRITE COLOR 0
+SPR_COLOR1      = $D026 ; SHARED SPRITE COLOR 1
+SPR0_PTR        = $07F8 ; SPRITE 0 DATA POINTER
+SPR0_X          = $D000 ; SPRITE X COORDINATE
+SPR0_Y          = $D001 ; SPRITE Y COORDINATE
+SPR0_COLOR      = $D027 ; SPRITE 0 COLOR
+FRAME0_ADDR     = #$80
+FRAME0_DATA     = $2000
+COLOR_BLACK     = #0
 
 INIT
+        ; LOAD THE MAZE ========================================================
         ; DISABLED INTERRUPTS
         SEI
 
@@ -125,6 +138,41 @@ CONTCPY INY             ; WRITE UNTIL Y OVERFLOWS BACK TO ZERO
         JMP CPLOOP2     ; KEEP COPYING
 CPYEND
 
+        ; LOAD SPRITES =========================================================
+        ; ENABLE SPRITE
+        LDA #%00000001
+        STA SPR_ENABLE
+
+        ; SET COLOR MODE
+        LDA #%00000000
+        STA SPR_COLORMODE
+
+        ; SET SPRITE COLOR
+        LDA COLOR_BLACK
+        STA SPR0_COLOR
+
+        ; SET SPRITE X
+        LDX #%00000001
+        STX SPR_MSBX
+        LDX #40
+        STX SPR0_X
+
+        ; SET SPRITE Y
+        LDY #233
+        STY SPR0_Y
+
+        ; SET INITIAL SPRITE POINTER
+        LDA FRAME0_ADDR
+        STA SPR0_PTR
+
+        ; LOAD SPRITE FRAMES IN A LOOP
+        LDX #0
+LDSPR   LDA SPRITES,X
+        STA FRAME0_DATA,X
+        INX
+        CPX #255 ; 64 * 4 BYTES FOR 4 FRAMES
+        BNE LDSPR
+
 MAIN    
         JMP MAIN
 
@@ -157,7 +205,8 @@ MAZE    BYTE    $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,
         BYTE    $00,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$00,$01,$01,$01,$01,$01,$01,$01,$01,$00,$01,$01,$00,$01,$01,$00
         BYTE    $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$01,$01,$00,$00,$00,$00
 
-S_DOWN  BYTE $00,$00,$00
+; DOWN
+SPRITES BYTE $00,$00,$00
         BYTE $03,$C0,$00
         BYTE $07,$E0,$00
         BYTE $05,$A0,$00
@@ -179,8 +228,8 @@ S_DOWN  BYTE $00,$00,$00
         BYTE $00,$00,$00
         BYTE $00,$00,$00
         BYTE $00
-
-S_RIGHT BYTE $00,$00,$00
+; RIGHT
+        BYTE $00,$00,$00
         BYTE $03,$C0,$00
         BYTE $07,$E0,$00
         BYTE $07,$B0,$00
@@ -203,7 +252,8 @@ S_RIGHT BYTE $00,$00,$00
         BYTE $00,$00,$00
         BYTE $00
 
-S_UP    BYTE $00,$00,$00
+; UP
+        BYTE $00,$00,$00
         BYTE $03,$C0,$00
         BYTE $07,$E0,$00
         BYTE $07,$E0,$00
@@ -226,7 +276,8 @@ S_UP    BYTE $00,$00,$00
         BYTE $00,$00,$00
         BYTE $00
 
-S_LEFT  BYTE $00,$00,$00
+; LEFT  
+        BYTE $00,$00,$00
         BYTE $03,$C0,$00
         BYTE $07,$E0,$00
         BYTE $0D,$E0,$00
