@@ -28,7 +28,10 @@ SPR0_PTR        = $07F8 ; SPRITE 0 DATA POINTER
 SPR0_X          = $D000 ; SPRITE X COORDINATE
 SPR0_Y          = $D001 ; SPRITE Y COORDINATE
 SPR0_COLOR      = $D027 ; SPRITE 0 COLOR
-FRAME0_ADDR     = #$80
+DOWN_ADDR       = #$80
+RIGHT_ADDR      = #$81
+UP_ADDR         = #$82
+LEFT_ADDR       = #$83
 FRAME0_DATA     = $2000
 COLOR_BLACK     = #0
 JOYSTICK_B      = $DC01
@@ -163,7 +166,7 @@ CPYEND
         STY SPR0_Y
 
         ; SET INITIAL SPRITE POINTER
-        LDA FRAME0_ADDR
+        LDA DOWN_ADDR
         STA SPR0_PTR
 
         ; LOAD SPRITE FRAMES IN A LOOP
@@ -193,17 +196,23 @@ UP      LDA #%00000001
         BIT JOYSTICK_B
         BNE DOWN
         DEC SPR0_Y
+        LDX UP_ADDR
+        STX SPR0_PTR
+        
 
 DOWN    LDA #%00000010
         BIT JOYSTICK_B
         BNE LEFT
         INC SPR0_Y
+        LDX DOWN_ADDR
+        STX SPR0_PTR
 
 LEFT    LDA #%00000100
         BIT JOYSTICK_B
         BNE RIGHT
         DEC SPR0_X
-
+        LDX LEFT_ADDR
+        STX SPR0_PTR
         LDX SPR0_X ;TOGGLE X MSB IF GOING UNDER 256 OR 0
         CPX #255
         BNE RIGHT
@@ -215,6 +224,8 @@ RIGHT   LDA #%00001000
         BIT JOYSTICK_B
         BNE MAIN
         INC SPR0_X
+        LDX RIGHT_ADDR
+        STX SPR0_PTR
         LDX SPR0_X ;TOGGLE X MSB IF GOING OVER 255 OR 511
         CPX #0
         BNE MAIN
