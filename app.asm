@@ -31,6 +31,7 @@ SPR0_COLOR      = $D027 ; SPRITE 0 COLOR
 FRAME0_ADDR     = #$80
 FRAME0_DATA     = $2000
 COLOR_BLACK     = #0
+JOYSTICK_B      = $DC01
 
 INIT
         ; LOAD THE MAZE ========================================================
@@ -174,6 +175,51 @@ LDSPR   LDA SPRITES,X
         BNE LDSPR
 
 MAIN    
+        LDX #255 ; WAIT A BIT
+        LDY #10
+WAIT    DEX
+        NOP
+        BNE WAIT
+        DEY
+        BNE WAIT
+
+        CMP JOYSTICK_B
+        BEQ MAIN
+
+READ    LDA JOYSTICK_B
+        STA $02
+
+UP      LDA #%00000001
+        BIT JOYSTICK_B
+        BNE DOWN
+        DEC SPR0_Y
+
+DOWN    LDA #%00000010
+        BIT JOYSTICK_B
+        BNE LEFT
+        INC SPR0_Y
+
+LEFT    LDA #%00000100
+        BIT JOYSTICK_B
+        BNE RIGHT
+        DEC SPR0_X
+
+        LDX SPR0_X ;TOGGLE X MSB IF GOING UNDER 256 OR 0
+        CPX #255
+        BNE RIGHT
+        LDA #%00000001 ; TOGGLE SPRITE 0
+        EOR SPR_MSBX
+        STA SPR_MSBX
+
+RIGHT   LDA #%00001000
+        BIT JOYSTICK_B
+        BNE MAIN
+        INC SPR0_X
+        LDX SPR0_X ;TOGGLE X MSB IF GOING OVER 255 OR 511
+        CPX #0
+        BNE MAIN
+        INC SPR_MSBX
+        
         JMP MAIN
 
 CHMAP   BYTE    $AA,$EE,$9A,$AE,$AA,$BA,$96,$AB
