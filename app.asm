@@ -44,7 +44,7 @@ IRQFLAG         = $D019
 IRQFINISH       = $EA31
 
 INIT
-        ; HANDLE COLLISIONS AFTER RASTER LINE 250
+        ; HANDLE GAME LOOP AFTER RASTER LINE 250
         LDA #%01111111 ; SWITCH OFF CIA-1 INTERRUPTS
         STA CIA1IRQ
 
@@ -53,9 +53,9 @@ INIT
 
         LDA #250
         STA IRQRASTER
-        LDA #<CHECK_COLL
+        LDA #<GAME_LOOP
         STA IRQADDRMSB
-        LDA #>CHECK_COLL
+        LDA #>GAME_LOOP
         STA IRQADDRLSB
 
         ; LOAD THE MAZE ========================================================
@@ -201,18 +201,36 @@ LDSPR   LDA SPRITES,X
         LDA #%00000001 ; ENABLE RASTER INTERRUPTS ONLY AFTER SETUP
         STA IRQCTRL
 
-MAIN    
-        LDX #255 ; WAIT A BIT
-        LDY #10
-WAIT    DEX
-        NOP
-        BNE WAIT
-        DEY
-        BNE WAIT
+MAIN    JMP MAIN ; KEEP THE PROGRAM RUNNING
 
+GAME_LOOP
+CHECK_COLL
+        ; CHECK FOR COLLISION BY POLLING SPRITE-BACKGROUND HARDWARE COLLISION REGISTER
+        LDX COLL_REG
+        CPX #%00000001
+        BNE NO_COLL
+        ; MOVE SPRITE BACK TO PREVIOUS POSITION IF COLLIDED
+        LDA $FA
+        STA SPR0_X
+        LDA $FB
+        STA SPR0_Y
+        LDA $FC
+        STA SPR_MSBX
+        JMP MOVE
+
+NO_COLL
+        ; STORE PREVIOUS LOCATION WITH NO COLLISION
+        LDA SPR0_X
+        STA $FA
+        LDA SPR0_Y
+        STA $FB
+        LDA SPR_MSBX
+        STA $FC
+
+MOVE
         ; MOVE THE DUDE ========================================================
         CMP JOYSTICK_B
-        BEQ MAIN_FINISH
+        BEQ FINISH_IRQ
 
 UP      LDA #%00000001
         BIT JOYSTICK_B
@@ -243,42 +261,16 @@ LEFT    LDA #%00000100
 
 RIGHT   LDA #%00001000
         BIT JOYSTICK_B
-        BNE MAIN_FINISH
+        BNE FINISH_IRQ
         INC SPR0_X
         LDX RIGHT_ADDR
         STX SPR0_PTR
         LDX SPR0_X ;TOGGLE X MSB IF GOING OVER 255 OR 511
         CPX #0
-        BNE MAIN_FINISH
+        BNE FINISH_IRQ
         INC SPR_MSBX
 
-MAIN_FINISH
-        JMP MAIN
-
-CHECK_COLL
-        ; CHECK FOR COLLISION BY POLLING SPRITE-BACKGROUND HARDWARE COLLISION REGISTER
-        LDX COLL_REG
-        CPX #%00000001
-        BNE NO_COLL
-        ; MOVE SPRITE BACK TO PREVIOUS POSITION IF COLLIDED
-        LDA $FA
-        STA SPR0_X
-        LDA $FB
-        STA SPR0_Y
-        LDA $FC
-        STA SPR_MSBX
-
-        ASL IRQFLAG
-        JMP IRQFINISH
-NO_COLL
-        ; STORE PREVIOUS LOCATION WITH NO COLLISION
-        LDA SPR0_X
-        STA $FA
-        LDA SPR0_Y
-        STA $FB
-        LDA SPR_MSBX
-        STA $FC
-
+FINISH_IRQ
         ASL IRQFLAG
         JMP IRQFINISH
 
