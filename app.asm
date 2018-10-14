@@ -34,8 +34,30 @@ FRAME0_DATA     = $2000
 COLOR_BLACK     = #0
 JOYSTICK_B      = $DC01
 COLL_REG        = $D01F
+CIA1IRQ         = $DC0D
+RASTERREG       = $D011
+IRQRASTER       = $D012
+IRQADDRMSB      = $0314
+IRQADDRLSB      = $0315
+IRQCTRL         = $D01A
+IRQFLAG         = $D019
+IRQFINISH       = $EA31
 
 INIT
+        ; HANDLE COLLISIONS AFTER RASTER LINE 250
+        LDA #%01111111 ; SWITCH OFF CIA-1 INTERRUPTS
+        STA CIA1IRQ
+
+        AND $D011 ; CLEAR VIC RASTER REGISTER
+        STA RASTERREG
+
+        LDA #250
+        STA IRQRASTER
+        LDA #<CHECK_COLL
+        STA IRQADDRMSB
+        LDA #>CHECK_COLL
+        STA IRQADDRLSB
+
         ; LOAD THE MAZE ========================================================
         ; DISABLED INTERRUPTS
         SEI
@@ -176,14 +198,8 @@ LDSPR   LDA SPRITES,X
         CPX #255 ; 64 * 4 BYTES FOR 4 FRAMES
         BNE LDSPR
 
-; TEMP CODE
-        LDA SPR0_X
-        STA $FA
-        LDA SPR0_Y
-        STA $FB
-        LDA SPR_MSBX
-        STA $FC
-        JMP MAIN
+        LDA #%00000001 ; ENABLE RASTER INTERRUPTS ONLY AFTER SETUP
+        STA IRQCTRL
 
 MAIN    
         LDX #255 ; WAIT A BIT
@@ -196,7 +212,7 @@ WAIT    DEX
 
         ; MOVE THE DUDE ========================================================
         CMP JOYSTICK_B
-        BEQ CHECK_COLL
+        BEQ MAIN_FINISH
 
 UP      LDA #%00000001
         BIT JOYSTICK_B
@@ -227,14 +243,17 @@ LEFT    LDA #%00000100
 
 RIGHT   LDA #%00001000
         BIT JOYSTICK_B
-        BNE CHECK_COLL
+        BNE MAIN_FINISH
         INC SPR0_X
         LDX RIGHT_ADDR
         STX SPR0_PTR
         LDX SPR0_X ;TOGGLE X MSB IF GOING OVER 255 OR 511
         CPX #0
-        BNE CHECK_COLL
+        BNE MAIN_FINISH
         INC SPR_MSBX
+
+MAIN_FINISH
+        JMP MAIN
 
 CHECK_COLL
         ; CHECK FOR COLLISION BY POLLING SPRITE-BACKGROUND HARDWARE COLLISION REGISTER
@@ -248,16 +267,20 @@ CHECK_COLL
         STA SPR0_Y
         LDA $FC
         STA SPR_MSBX
-        JMP MAIN
+
+        ASL IRQFLAG
+        JMP IRQFINISH
 NO_COLL
         ; STORE PREVIOUS LOCATION WITH NO COLLISION
-        ;LDA SPR0_X
-        ;STA $FA
-        ;LDA SPR0_Y
-        ;STA $FB
-        ;LDA SPR_MSBX
-        ;STA $FC
-        JMP MAIN
+        LDA SPR0_X
+        STA $FA
+        LDA SPR0_Y
+        STA $FB
+        LDA SPR_MSBX
+        STA $FC
+
+        ASL IRQFLAG
+        JMP IRQFINISH
 
 CHMAP   BYTE    $AA,$EE,$9A,$AE,$AA,$BA,$96,$AB
         BYTE    $00,$44,$00,$11,$00,$11,$00,$04
